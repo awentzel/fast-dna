@@ -279,7 +279,7 @@ describe("select", (): void => {
             <Select
                 multiselectable={true}
                 name="testName"
-                formId="testForm"
+                form="testForm"
                 required={true}
             >
                 {itemA}

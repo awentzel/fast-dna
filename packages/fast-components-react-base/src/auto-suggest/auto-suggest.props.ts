@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
+    AutoSuggestClassNameContract,
     ManagedClasses,
-    SelectClassNameContract,
 } from "@microsoft/fast-components-class-name-contracts-base";
 import { ListboxItemProps } from "../listbox-item";
 import { AutoSuggestState } from "./auto-suggest";
@@ -32,25 +32,32 @@ export interface AutoSuggestHandledProps extends AutoSuggestManagedClasses {
     placeholder?: string;
 
     /**
-     * The onValueChange event handler
+     * Pre-populates input field with provided string on mount
      */
-    onValueChange?: (
-        newValue: string | string[],
-        selectedItems: ListboxItemProps[],
-        displayString: string
-    ) => void;
+    initialValue?: string;
 
     /**
-     * Whether a listitem should automatically get focus when this component is mounted
-     * (multi-select only)
+     * The value of the input field (controlled mode)
      */
-    autoFocus?: boolean;
+    value?: string;
 
     /**
-     * The aria-labelledby attribute to link the auto-suggest to an existing
-     * element that provides it an accessible name
+     * The onValueChanged event handler
+     * called when text changes in the input region
      */
-    labelledBy?: string;
+    onValueChanged?: (value: string) => void;
+
+    /**
+     * The onInvoked event handler
+     * called when the input text is invoked
+     * (ie. user hits enter while focused on the input area)
+     */
+    onInvoked?: (value: string, item: ListboxItemProps) => void;
+
+    /**
+     * The aria-label attribute of the component
+     */
+    label?: string;
 }
 
 export type AutoSuggestProps = AutoSuggestHandledProps & AutoSuggestUnhandledProps;

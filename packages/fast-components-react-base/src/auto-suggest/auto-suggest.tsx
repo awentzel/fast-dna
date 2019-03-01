@@ -2,109 +2,73 @@ import * as React from "react";
 import Foundation, { HandledProps } from "@microsoft/fast-components-foundation-react";
 import { get } from "lodash-es";
 import { KeyCodes } from "@microsoft/fast-web-utilities";
-import { SelectClassNameContract } from "@microsoft/fast-components-class-name-contracts-base";
-import { SelectHandledProps, SelectProps, SelectUnhandledProps } from "./select.props";
+import { AutoSuggestClassNameContract } from "@microsoft/fast-components-class-name-contracts-base";
+import {
+    AutoSuggestHandledProps,
+    AutoSuggestProps,
+    AutoSuggestUnhandledProps,
+} from "./auto-suggest.props";
 import { ListboxItemProps } from "../listbox-item";
 import Listbox from "../listbox";
-import Button from "../button";
+import TextField, { TextFieldType } from "../text-field";
 
-export interface SelectState {
-    value: string | string[];
-    displayString: string;
-    selectedItems: ListboxItemProps[];
+export interface AutoSuggestState {
+    currentValue: string;
     isMenuOpen: boolean;
+    focusedItem: ListboxItemProps;
 }
 
-class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, SelectState> {
-    public static displayName: string = "Select";
+class AutoSuggest extends Foundation<
+    AutoSuggestHandledProps,
+    AutoSuggestUnhandledProps,
+    AutoSuggestState
+> {
+    public static displayName: string = "AutoSuggest";
 
-    public static defaultProps: Partial<SelectProps> = {
-        multiselectable: false,
+    public static defaultProps: Partial<AutoSuggestProps> = {
+        initialValue: "",
         disabled: false,
-        defaultSelection: [],
         placeholder: "",
     };
 
     /**
      * Handled props instantiation
      */
-    protected handledProps: HandledProps<SelectHandledProps> = {
+    protected handledProps: HandledProps<AutoSuggestHandledProps> = {
         isMenuOpen: void 0,
         disabled: void 0,
-        displayStringFormatter: void 0,
-        form: void 0,
-        labelledBy: void 0,
-        multiselectable: void 0,
-        trigger: void 0,
-        required: void 0,
+        label: void 0,
+        inputRegion: void 0,
         managedClasses: void 0,
-        selectedItems: void 0,
-        defaultSelection: void 0,
-        onValueChange: void 0,
+        initialValue: void 0,
+        onValueChanged: void 0,
+        onInvoked: void 0,
         placeholder: void 0,
-        autoFocus: void 0,
     };
 
     private rootElement: React.RefObject<HTMLDivElement> = React.createRef<
         HTMLDivElement
     >();
 
+    private shouldFocusMenuOnNextRender: boolean = false;
+
     /**
      * constructor
      */
-    constructor(props: SelectProps) {
+    constructor(props: AutoSuggestProps) {
         super(props);
 
-        let initialSelection: ListboxItemProps[] = Listbox.getListboxItemDataFromIds(
-            this.props.selectedItems !== undefined
-                ? this.props.selectedItems
-                : this.props.defaultSelection,
-            this.props.children
-        );
-
-        if (!this.props.multiselectable && initialSelection.length > 1) {
-            initialSelection = initialSelection.slice(0, 1);
-        }
-
         this.state = {
-            selectedItems: initialSelection,
-            value: "",
-            displayString: "",
+            currentValue: this.props.initialValue,
+            focusedItem: null,
             isMenuOpen: this.validateMenuState(false),
         };
     }
 
-    public componentDidUpdate(prevProps: SelectProps): void {
-        let updatedSelection: ListboxItemProps[];
-        let updatedMenuVisibility: boolean = this.state.isMenuOpen;
-
-        if (prevProps.selectedItems !== this.props.selectedItems) {
-            updatedSelection = Listbox.getListboxItemDataFromIds(
-                this.props.selectedItems,
-                this.props.children
-            );
-        }
-
-        if (prevProps.multiselectable !== this.props.multiselectable) {
-            // in the case that the multiselect is turned off but there are multiple items selected,
-            // choose the first item in the list of selected items
-            if (
-                this.props.multiselectable === false &&
-                this.state.selectedItems.length > 1
-            ) {
-                updatedSelection = [this.state.selectedItems[0]];
-            }
-
-            updatedMenuVisibility = this.checkPropsForMenuState();
-        }
-
-        if (prevProps.isMenuOpen !== this.props.isMenuOpen) {
-            updatedMenuVisibility = this.checkPropsForMenuState();
-        }
-
-        if (updatedSelection !== undefined) {
-            this.updateSelection(updatedSelection);
-        }
+    public componentDidUpdate(prevProps: AutoSuggestProps): void {
+        const updatedMenuVisibility: boolean = this.validateMenuState(
+            this.state.isMenuOpen
+        );
 
         if (updatedMenuVisibility !== this.state.isMenuOpen) {
             this.toggleMenu(updatedMenuVisibility);
@@ -112,21 +76,7 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
     }
 
     public componentDidMount(): void {
-        let initialSelection: ListboxItemProps[] = Listbox.getListboxItemDataFromIds(
-            this.props.selectedItems !== undefined
-                ? this.props.selectedItems
-                : this.props.defaultSelection,
-            this.props.children
-        );
-
-        if (!this.props.multiselectable && initialSelection.length > 1) {
-            initialSelection = initialSelection.slice(0, 1);
-        }
-
         window.addEventListener("click", this.handleWindowClick);
-
-        this.updateSelection(initialSelection);
-        this.toggleMenu(this.checkPropsForMenuState());
     }
 
     public componentWillUnmount(): void {
@@ -143,11 +93,14 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
                 aria-disabled={this.props.disabled || null}
                 ref={this.rootElement}
                 className={this.generateClassNames()}
-                onKeyDown={this.handleKeydown}
-                onClick={this.handleClick}
+                onChange={this.handleChange}
             >
-                {this.renderContentDisplay()}
-                {this.renderHiddenSelectElement()}
+                <div
+                    onKeyDown={this.handleInputRegionKeydown}
+                    onClick={this.handleInputRegionClick}
+                >
+                    {this.renderInputRegion()}
+                </div>
                 {this.renderMenu()}
             </div>
         );
@@ -157,26 +110,19 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
      * Create class names
      */
     protected generateClassNames(): string {
-        let className: string = get(this.props.managedClasses, "select", "");
+        let className: string = get(this.props.managedClasses, "autoSuggest", "");
 
         if (this.props.disabled) {
             className = className.concat(
                 " ",
-                get(this.props.managedClasses, "select__disabled", "")
+                get(this.props.managedClasses, "autoSuggest__disabled", "")
             );
         }
 
         if (this.state.isMenuOpen) {
             className = className.concat(
                 " ",
-                get(this.props.managedClasses, "select_menu__open", "")
-            );
-        }
-
-        if (this.props.multiselectable) {
-            className = className.concat(
-                " ",
-                get(this.props.managedClasses, "select__multiSelectable", "")
+                get(this.props.managedClasses, "autoSuggest_menu__open", "")
             );
         }
 
@@ -184,57 +130,14 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
     }
 
     /**
-     * Determine menu state based on props
-     */
-    private checkPropsForMenuState = (): boolean => {
-        let shouldMenuBeOpen: boolean = false;
-
-        if (this.props.isMenuOpen !== undefined) {
-            shouldMenuBeOpen = this.props.isMenuOpen;
-        } else if (this.props.multiselectable === true) {
-            shouldMenuBeOpen = true;
-        }
-
-        return shouldMenuBeOpen;
-    };
-
-    /**
-     * Renders a hidden select element which can interact with a
-     * form hosting this component
-     */
-    private renderHiddenSelectElement(): React.ReactNode {
-        return (
-            <select
-                required={this.props.required || null}
-                name={this.props.name || null}
-                form={this.props.form || null}
-                value={this.state.value}
-                multiple={this.props.multiselectable || null}
-                disabled={this.props.disabled || null}
-                onChange={this.onSelectValueChange}
-                style={{
-                    display: "none",
-                }}
-            />
-        );
-    }
-
-    /**
-     * This exists only to suppress a build warning
-     */
-    private onSelectValueChange = (event: React.ChangeEvent): void => {
-        return null;
-    };
-
-    /**
      * Determine which function to use to render content display (ie. the part of the control that shows when the menu isn't open)
      * and invokes it
      */
-    private renderContentDisplay(): React.ReactNode {
-        if (this.props.trigger !== undefined) {
-            return this.props.trigger(this.props, this.state);
+    private renderInputRegion(): React.ReactNode {
+        if (this.props.inputRegion !== undefined) {
+            return this.props.inputRegion(this.props, this.state);
         } else {
-            return this.defaultDisplayRenderFunction(this.props, this.state);
+            return this.defaultInputRegionRenderFunction(this.props, this.state);
         }
     }
 
@@ -242,27 +145,29 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
      * Determine which function to use to render the menu and invokes it
      */
     private renderMenu(): React.ReactNode {
+        const shouldFocusOnMenu: boolean = this.shouldFocusMenuOnNextRender;
+        this.shouldFocusMenuOnNextRender = false;
+
         if (!this.state.isMenuOpen) {
             return;
         }
-        let shouldfocus: boolean = this.props.autoFocus;
-        if (shouldfocus === undefined) {
-            shouldfocus = this.props.multiselectable ? false : true;
-        }
+
+        const focusedItem: ListboxItemProps[] =
+            this.state.focusedItem !== null ? [this.state.focusedItem] : [];
         return (
             <Listbox
-                labelledBy={this.props.labelledBy}
+                typeAheadEnabled={false}
                 disabled={this.props.disabled}
-                focusItemOnMount={shouldfocus}
-                multiselectable={this.props.multiselectable}
-                defaultSelection={this.state.selectedItems}
-                selectedItems={this.props.selectedItems}
-                onSelectedItemsChanged={this.updateSelection}
+                focusItemOnMount={shouldFocusOnMenu}
+                defaultSelection={focusedItem}
+                onSelectedItemsChanged={this.updateFocusedItem}
+                onItemInvoked={this.handleItemInvoked}
+                onKeyDown={this.handleMenuKeydown}
                 managedClasses={{
-                    listbox: get(this.props.managedClasses, "select_menu", ""),
+                    listbox: get(this.props.managedClasses, "autoSuggest_menu", ""),
                     listbox__disabled: get(
                         this.props.managedClasses,
-                        "select_menuDisabled",
+                        "autoSuggest_menuDisabled",
                         ""
                     ),
                 }}
@@ -273,155 +178,222 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
     }
 
     /**
-     * Updates selection state and associated values
-     */
-    private updateSelection = (newSelection: ListboxItemProps[]): void => {
-        const newValue: string | string[] = this.getValueFromSelection(newSelection);
-        const newDisplayString: string = this.getFormattedDisplayString(newSelection);
-        this.setState({
-            selectedItems: newSelection,
-            value: newValue,
-            displayString: newDisplayString,
-        });
-        if (typeof this.props.onValueChange === "function") {
-            this.props.onValueChange(newValue, newSelection, newDisplayString);
-        }
-    };
-
-    /**
-     * Extracts values in the correct format (string in single select and string[] in multi-select) from an array of items.
-     */
-    private getValueFromSelection = (
-        newSelection: ListboxItemProps[]
-    ): string | string[] => {
-        if (this.props.multiselectable) {
-            return newSelection.map((thisItem: ListboxItemProps) => {
-                return thisItem.value;
-            });
-        } else {
-            if (newSelection.length === 0) {
-                return "";
-            }
-            return newSelection[0].value;
-        }
-    };
-
-    /**
      * The default function that renders an unstyled content display
      */
-    private defaultDisplayRenderFunction = (
-        props: SelectProps,
-        state: SelectState
+    private defaultInputRegionRenderFunction = (
+        props: AutoSuggestProps,
+        state: AutoSuggestState
     ): React.ReactNode => {
-        if (props.multiselectable) {
-            return null;
-        }
         return (
-            <Button
+            <TextField
+                value={this.state.currentValue}
+                type={TextFieldType.text}
                 disabled={props.disabled}
-                aria-labelledby={props.labelledBy || null}
-                aria-haspopup={true}
-                aria-expanded={state.isMenuOpen}
-            >
-                {state.displayString}
-            </Button>
+                aria-label={this.props.label || null}
+            />
         );
     };
 
     /**
-     * The default function that formats the display string generated based on selection.
-     * This implementation should match the default formatting a base html select control applies.
-     * Developers can provide an alternate formatter if desired.
+     * Updates selection state and associated values
      */
-    private defaultDisplayStringFormatter = (
-        selectedOptions: ListboxItemProps[],
-        placeholder: string
-    ): string => {
-        const optionValues: string[] = selectedOptions.map(
-            (selectedOption: ListboxItemProps): string => {
-                return selectedOption.displayString || selectedOption.value;
-            }
-        );
-
-        return selectedOptions.length > 0 ? optionValues.join(", ") : placeholder;
+    private updateFocusedItem = (newSelection: ListboxItemProps[]): void => {
+        if (newSelection.length === 0) {
+            this.setState({
+                focusedItem: null,
+            });
+        } else {
+            this.setState({
+                focusedItem: newSelection[0],
+            });
+            this.updateValue(newSelection[0].value);
+        }
     };
 
     /**
      * Handles clicks
      */
-    private handleClick = (e: React.MouseEvent): void => {
+    private handleInputRegionClick = (e: React.MouseEvent): void => {
         if (this.props.disabled || e.defaultPrevented) {
             return;
         }
-        this.toggleMenu(!this.state.isMenuOpen);
-    };
-
-    /**
-     * Handles key events
-     */
-    private handleKeydown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
-        if (this.props.disabled || e.defaultPrevented) {
-            return;
-        }
-        switch (e.keyCode) {
-            case KeyCodes.enter:
-            case KeyCodes.space:
-                this.toggleMenu(!this.state.isMenuOpen);
-                break;
-            case KeyCodes.escape:
-                this.toggleMenu(false);
-                break;
-            case KeyCodes.arrowDown:
-            case KeyCodes.arrowRight:
-                if (!this.props.multiselectable && !this.state.isMenuOpen) {
-                    this.incrementSelectedOption(+1);
-                }
-                break;
-            case KeyCodes.arrowUp:
-            case KeyCodes.arrowLeft:
-                if (!this.props.multiselectable && !this.state.isMenuOpen) {
-                    this.incrementSelectedOption(-1);
-                }
-                break;
-        }
-    };
-
-    /**
-     * Increment selection
-     */
-    private incrementSelectedOption = (increment: number): void => {
-        const childrenAsArray: React.ReactNode[] = React.Children.toArray(
-            this.props.children
-        );
-
-        if (this.state.selectedItems.length === 1) {
-            const selectedItemIndex: number = Listbox.getItemIndexById(
-                this.state.selectedItems[0].id,
-                this.props.children
-            );
-            if (selectedItemIndex !== -1) {
-                const startIndex: number = selectedItemIndex + increment;
-                const endIndex: number = increment > -1 ? childrenAsArray.length - 1 : 0;
-                this.selectItemInRange(startIndex, endIndex, childrenAsArray, increment);
-            }
-        } else {
-            const isLastChild: boolean = increment > -1;
-            const lastChildIndex: number = childrenAsArray.length - 1;
-            this.selectItemInRange(
-                isLastChild ? 0 : lastChildIndex,
-                isLastChild ? lastChildIndex : 0,
-                childrenAsArray,
-                increment
-            );
-        }
-
         this.toggleMenu(true);
     };
 
     /**
-     * Select a child in a range
+     * Handles item invoked
      */
-    private selectItemInRange = (
+    private handleItemInvoked = (item: ListboxItemProps): void => {
+        this.invoke(item.value, item);
+    };
+
+    /**
+     * Invokes the auto-select component
+     */
+    private invoke = (value: string, item: ListboxItemProps): void => {
+        if (typeof this.props.onInvoked === "function") {
+            this.props.onInvoked(value, item);
+        }
+    };
+
+    /**
+     * Handles value changes from input element
+     */
+    private handleChange = (e: React.FormEvent): void => {
+        const newValue: string = (e.target as HTMLInputElement).value;
+        this.updateValue(newValue);
+    };
+
+    /**
+     * Update the currentValue of the component
+     */
+    private updateValue = (newValue: string): void => {
+        if (newValue !== this.state.currentValue) {
+            this.toggleMenu(true);
+            this.setState({
+                currentValue: newValue,
+            });
+        }
+    };
+
+    /**
+     * Handles input region key events
+     */
+    private handleInputRegionKeydown = (e: React.KeyboardEvent<Element>): void => {
+        if (this.props.disabled || e.defaultPrevented) {
+            return;
+        }
+
+        switch (e.keyCode) {
+            case KeyCodes.enter:
+                this.invoke(this.state.currentValue, null);
+                break;
+
+            case KeyCodes.escape:
+                this.toggleMenu(false);
+                break;
+
+            case KeyCodes.arrowDown:
+                this.focusOnMenu(1);
+                break;
+
+            case KeyCodes.arrowUp:
+                this.focusOnMenu(-1);
+                break;
+
+            default:
+                if (e.target instanceof HTMLInputElement) {
+                    const newValue: string = (e.target as HTMLInputElement).value;
+                    this.updateValue(newValue);
+                    break;
+                }
+        }
+    };
+
+    /**
+     * Handles menu key events
+     */
+    private handleMenuKeydown = (e: React.KeyboardEvent<Element>): void => {
+        if (this.props.disabled || e.defaultPrevented) {
+            return;
+        }
+        switch (e.keyCode) {
+            case KeyCodes.escape:
+                this.toggleMenu(false);
+                break;
+
+            case KeyCodes.arrowDown:
+                this.checkForMenuEnd(1);
+                break;
+
+            case KeyCodes.arrowUp:
+                this.checkForMenuEnd(-1);
+                break;
+
+            default:
+                if (this.isValidInput(e)) {
+                    this.focusOnInput();
+                }
+                break;
+        }
+    };
+
+    /**
+     * test if a key press is a valid input
+     */
+    private isValidInput = (e: React.KeyboardEvent<Element>): boolean => {
+        if (
+            e.keyCode < 8 ||
+            (e.keyCode > 8 && e.keyCode < 48) ||
+            (e.keyCode > 90 && e.keyCode < 96) ||
+            (e.keyCode > 111 && e.keyCode < 186) ||
+            e.keyCode > 222
+        ) {
+            return false;
+        }
+        return true;
+    };
+
+    /**
+     * Passes focus to the input element if focus would bump up against the ends of the menu
+     */
+    private checkForMenuEnd = (increment: number): void => {
+        if (this.state.focusedItem === null) {
+            return;
+        }
+
+        const childrenAsArray: React.ReactNode[] = React.Children.toArray(
+            this.props.children
+        );
+
+        const currentItemIndex: number = Listbox.getItemIndexById(
+            this.state.focusedItem.id,
+            this.props.children
+        );
+
+        const startIndex: number = currentItemIndex;
+        const endIndex: number = increment > -1 ? childrenAsArray.length - 1 : 0;
+
+        const nextFocusableItem: ListboxItemProps = (Listbox.getFirstValidOptionInRange(
+            startIndex,
+            endIndex,
+            childrenAsArray,
+            increment
+        ) as React.ReactElement<any>).props;
+
+        if (
+            nextFocusableItem === null ||
+            nextFocusableItem.id === this.state.focusedItem.id
+        ) {
+            // at the end of the list, focus on input
+            this.focusOnInput();
+        }
+    };
+
+    /**
+     * Opens menu and focuses on first or last valid item
+     */
+    private focusOnMenu = (increment: number): void => {
+        const childrenAsArray: React.ReactNode[] = React.Children.toArray(
+            this.props.children
+        );
+
+        if (childrenAsArray.length === 0) {
+            return;
+        }
+
+        const startIndex: number = increment > -1 ? 0 : childrenAsArray.length - 1;
+        const endIndex: number = increment > -1 ? childrenAsArray.length - 1 : 0;
+        this.focusFirstItemInRange(startIndex, endIndex, childrenAsArray, increment);
+
+        this.toggleMenu(true);
+        this.shouldFocusMenuOnNextRender = true;
+    };
+
+    /**
+     * Gets first child in a range
+     */
+    private focusFirstItemInRange = (
         startIndex: number,
         endIndex: number,
         childrenAsArray: React.ReactNode[],
@@ -434,7 +406,7 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
             increment
         );
         if (validOption !== null) {
-            this.updateSelection([(validOption as React.ReactElement<any>).props]);
+            this.updateFocusedItem([(validOption as React.ReactElement<any>).props]);
         }
     };
 
@@ -447,18 +419,36 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
             this.setState({
                 isMenuOpen: updatedIsMenuOpen,
             });
+            if (this.state.isMenuOpen && !updatedIsMenuOpen) {
+                this.focusOnInput();
+            }
         }
     };
 
     /**
-     * Close the menu when when there are clicks outside
+     * Focus on the input element
+     */
+    private focusOnInput = (): void => {
+        const inputElements: HTMLCollectionOf<
+            HTMLInputElement
+        > = this.rootElement.current.getElementsByTagName("input");
+        if (inputElements.length > 0) {
+            inputElements[0].focus();
+        }
+    };
+
+    /**
+     * Determine menu state by comparing desired state to props
      */
     private validateMenuState = (desiredMenuState: boolean): boolean => {
         let shouldOpenMenu: boolean = desiredMenuState;
+
+        if (React.Children.count(this.props.children) === 0) {
+            shouldOpenMenu = false;
+        }
+
         if (this.props.isMenuOpen !== undefined) {
             shouldOpenMenu = this.props.isMenuOpen;
-        } else if (this.props.multiselectable === true) {
-            shouldOpenMenu = true;
         }
         return shouldOpenMenu;
     };
@@ -475,18 +465,8 @@ class Select extends Foundation<SelectHandledProps, SelectUnhandledProps, Select
             this.toggleMenu(false);
         }
     };
-
-    /**
-     * Determines what function needs to be called to format the result string and
-     * calls it with the appropriate params
-     */
-    private getFormattedDisplayString = (selectedOptions: ListboxItemProps[]): string => {
-        return this.props.displayStringFormatter === undefined
-            ? this.defaultDisplayStringFormatter(selectedOptions, this.props.placeholder)
-            : this.props.displayStringFormatter(selectedOptions, this.props.placeholder);
-    };
 }
 
-export default Select;
-export * from "./select.props";
-export { SelectClassNameContract };
+export default AutoSuggest;
+export * from "./auto-suggest.props";
+export { AutoSuggestClassNameContract };

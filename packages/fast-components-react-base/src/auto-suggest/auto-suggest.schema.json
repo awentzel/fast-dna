@@ -20,6 +20,7 @@
         "isMenuOpen": {
             "title": "Is menu open",
             "type": "boolean"
+        }
     },
     "reactProperties": {
         "children": {

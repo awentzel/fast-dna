@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ComponentFactoryExample } from "@microsoft/fast-development-site-react";
-import schema from "./select.schema.json";
-import Select, { SelectManagedClasses, SelectProps } from "./select";
+import schema from "./auto-suggest.schema.json";
+import AutoSuggest, { AutoSuggestManagedClasses, AutoSuggestProps } from "./auto-suggest";
 import { ListboxItemProps } from "../listbox-item";
 import Documentation from "./.tmp/documentation";
 
@@ -20,24 +20,23 @@ function ListboxItemPropFactory(id: string): ListboxItemProps {
     };
 }
 
-const managedClasses: SelectManagedClasses = {
+const managedClasses: AutoSuggestManagedClasses = {
     managedClasses: {
-        select: "select",
-        select__disabled: "select__disabled",
-        select_menu: "select_menu",
-        select_menu__open: "select_menu__open",
-        select__multiSelectable: "select__multiSelectable",
+        autoSuggest: "select",
+        autoSuggest__disabled: "select__disabled",
+        autoSuggest_menu: "select_menu",
+        autoSuggest_menu__open: "select_menu__open",
     },
 };
 
-const examples: ComponentFactoryExample<SelectProps> = {
-    name: "Select",
-    component: Select,
+const examples: ComponentFactoryExample<AutoSuggestProps> = {
+    name: "Auto Suggest",
+    component: AutoSuggest,
     schema: schema as any,
     documentation: <Documentation />,
     detailData: {
         ...managedClasses,
-        placeholder: "Select an option",
+        placeholder: "Type something....",
         children: [
             {
                 id: "listbox-item",

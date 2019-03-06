@@ -9,6 +9,7 @@ import DevicePage from "./pages/viewer/device-page";
 import DevicePageViewerContent from "./pages/viewer/device-page.viewer-content";
 import UpdatePropsPage from "./pages/viewer/update-props-page";
 import UpdatePropsViewerContent from "./pages/viewer/update-props-page.viewer-content";
+import { FormTestPage } from "./pages/form";
 
 class App extends React.Component<{}, {}> {
     public render(): React.ReactNode {
@@ -62,6 +63,7 @@ class App extends React.Component<{}, {}> {
                             path={"/viewer/update-props/content"}
                             component={UpdatePropsViewerContent}
                         />
+                        <Route exact={true} path={"/form"} component={FormTestPage} />
                         <Route exact={true} path={"/"}>
                             <Redirect to={"/navigation"} />
                         </Route>
@@ -76,6 +78,9 @@ class App extends React.Component<{}, {}> {
             return (
                 <React.Fragment>
                     <ul>
+                        <li>
+                            <Link to="/form">Form</Link>
+                        </li>
                         <li>
                             <Link to="/navigation">Navigation</Link>
                         </li>

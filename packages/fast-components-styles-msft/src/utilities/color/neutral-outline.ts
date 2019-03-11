@@ -50,9 +50,6 @@ const neutralOutlineAlgorithm: (designSystem: DesignSystem) => StatefulSwatch = 
                 neutralPalette
             ),
         };
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

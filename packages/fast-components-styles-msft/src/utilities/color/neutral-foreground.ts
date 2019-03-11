@@ -41,9 +41,6 @@ const neutralForegroundAlgorithm: (
             hover: getSwatch(hoverIndex, neutralPalette),
             active: getSwatch(activeIndex, neutralPalette),
         };
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

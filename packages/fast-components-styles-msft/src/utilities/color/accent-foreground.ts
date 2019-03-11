@@ -1,5 +1,6 @@
 import {
     DesignSystem,
+    DesignSystemResolver,
     ensureDesignSystemDefaults,
     withDesignSystemDefaults,
 } from "../../design-system";
@@ -22,38 +23,36 @@ export const accentForegroundDeltaHover: number = 1;
 export const accentForegroundDeltaActive: number = 2;
 
 const accentForegroundAlgorithm: (
-    designSystem: DesignSystem,
     contrastTarget: number
-) => StatefulSwatch = memoize(
-    (designSystem: DesignSystem, contrastTarget: number): StatefulSwatch => {
-        const accentPalette: Palette = palette(PaletteType.accent)(designSystem);
-        const indexes: {
-            rest: number;
-            hover: number;
-            active: number;
-        } = findAccessibleAccentSwatchIndexs(
-            designSystem,
-            contrastTarget,
-            designSystem.backgroundColor,
-            {
-                rest: accentForegroundDeltaRest,
-                hover: accentForegroundDeltaHover,
-                active: accentForegroundDeltaActive,
-            }
-        );
+) => DesignSystemResolver<StatefulSwatch> = (
+    contrastTarget: number
+): DesignSystemResolver<StatefulSwatch> => {
+    return memoize(
+        (designSystem: DesignSystem): StatefulSwatch => {
+            const accentPalette: Palette = palette(PaletteType.accent)(designSystem);
+            const indexes: {
+                rest: number;
+                hover: number;
+                active: number;
+            } = findAccessibleAccentSwatchIndexs(
+                designSystem,
+                contrastTarget,
+                designSystem.backgroundColor,
+                {
+                    rest: accentForegroundDeltaRest,
+                    hover: accentForegroundDeltaHover,
+                    active: accentForegroundDeltaActive,
+                }
+            );
 
-        return {
-            rest: getSwatch(indexes.rest, accentPalette),
-            hover: getSwatch(indexes.hover, accentPalette),
-            active: getSwatch(indexes.active, accentPalette),
-        };
-    },
-    (designSystem: DesignSystem, contrastTarget: number): string => {
-        return accentSwatch(designSystem)
-            .concat(contrastTarget.toString())
-            .concat(designSystem.backgroundColor);
-    }
-);
+            return {
+                rest: getSwatch(indexes.rest, accentPalette),
+                hover: getSwatch(indexes.hover, accentPalette),
+                active: getSwatch(indexes.active, accentPalette),
+            };
+        }
+    );
+};
 
 function accentForegroundFactory(contrast: number): StatefulSwatchResolver {
     function accentForegroundInternal(designSystem: DesignSystem): StatefulSwatch;
@@ -64,16 +63,15 @@ function accentForegroundFactory(contrast: number): StatefulSwatchResolver {
         if (typeof arg === "function") {
             return ensureDesignSystemDefaults(
                 (designSystem: DesignSystem): StatefulSwatch => {
-                    return accentForegroundAlgorithm(
+                    return accentForegroundAlgorithm(contrast)(
                         Object.assign({}, designSystem, {
                             backgroundColor: arg(designSystem),
-                        }),
-                        contrast
+                        })
                     );
                 }
             );
         } else {
-            return accentForegroundAlgorithm(withDesignSystemDefaults(arg), contrast);
+            return accentForegroundAlgorithm(contrast)(withDesignSystemDefaults(arg));
         }
     }
 

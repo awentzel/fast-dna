@@ -69,9 +69,6 @@ const neutralFillAlgorithm: DesignSystemResolver<FillSwatch> = memoize(
                 neutralPalette
             ),
         };
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

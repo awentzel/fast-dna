@@ -47,9 +47,6 @@ const neutralFillInputAlgorithm: DesignSystemResolver<FillSwatch> = memoize(
             active: color,
             selected: color,
         };
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

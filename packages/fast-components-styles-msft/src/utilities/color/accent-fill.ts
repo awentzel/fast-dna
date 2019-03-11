@@ -1,5 +1,6 @@
 import {
     DesignSystem,
+    DesignSystemResolver,
     ensureDesignSystemDefaults,
     withDesignSystemDefaults,
 } from "../../design-system";
@@ -27,44 +28,47 @@ export const accentFillDeltaSelected: number = 12;
  * Derives rest/hover/active active fill colors
  */
 export const accentFillAlgorithm: (
-    designSystem: DesignSystem,
     contrastTarget: number
-) => FillSwatch = memoize(
-    (designSystem: DesignSystem, contrastTarget: number): FillSwatch => {
-        const accentPalette: Palette = palette(PaletteType.accent)(designSystem);
-        const accent: Swatch = accentSwatch(designSystem);
-        const textColor: Swatch = accentForegroundCut(
-            Object.assign({}, designSystem, {
-                backgroundColor: accent,
-            })
-        );
-        const indexes: {
-            rest: number;
-            hover: number;
-            active: number;
-        } = findAccessibleAccentSwatchIndexs(designSystem, contrastTarget, textColor, {
-            rest: accentFillDeltaRest,
-            hover: accentFillDeltaHover,
-            active: accentFillDeltaActive,
-        });
+) => DesignSystemResolver<FillSwatch> = memoize(
+    (contrastTarget: number): DesignSystemResolver<FillSwatch> => {
+        return memoize(
+            (designSystem: DesignSystem): FillSwatch => {
+                const accentPalette: Palette = palette(PaletteType.accent)(designSystem);
+                const accent: Swatch = accentSwatch(designSystem);
+                const textColor: Swatch = accentForegroundCut(
+                    Object.assign({}, designSystem, {
+                        backgroundColor: accent,
+                    })
+                );
+                const indexes: {
+                    rest: number;
+                    hover: number;
+                    active: number;
+                } = findAccessibleAccentSwatchIndexs(
+                    designSystem,
+                    contrastTarget,
+                    textColor,
+                    {
+                        rest: accentFillDeltaRest,
+                        hover: accentFillDeltaHover,
+                        active: accentFillDeltaActive,
+                    }
+                );
 
-        return {
-            rest: getSwatch(indexes.rest, accentPalette),
-            hover: getSwatch(indexes.hover, accentPalette),
-            active: getSwatch(indexes.active, accentPalette),
-            selected: getSwatch(
-                indexes.rest +
-                    (isDarkTheme(designSystem)
-                        ? accentFillDeltaSelected * -1
-                        : accentFillDeltaSelected),
-                accentPalette
-            ),
-        };
-    },
-    (designSystem: DesignSystem, contrastTarget: number): string => {
-        return accentSwatch(designSystem)
-            .concat(contrastTarget.toString())
-            .concat(isDarkTheme(designSystem) ? "dark" : "light");
+                return {
+                    rest: getSwatch(indexes.rest, accentPalette),
+                    hover: getSwatch(indexes.hover, accentPalette),
+                    active: getSwatch(indexes.active, accentPalette),
+                    selected: getSwatch(
+                        indexes.rest +
+                            (isDarkTheme(designSystem)
+                                ? accentFillDeltaSelected * -1
+                                : accentFillDeltaSelected),
+                        accentPalette
+                    ),
+                };
+            }
+        );
     }
 );
 
@@ -80,16 +84,15 @@ function accentFillFactory(contrast: number): FillSwatchResolver {
         if (typeof arg === "function") {
             return ensureDesignSystemDefaults(
                 (designSystem: DesignSystem): FillSwatch => {
-                    return accentFillAlgorithm(
+                    return accentFillAlgorithm(contrast)(
                         Object.assign({}, designSystem, {
                             backgroundColor: arg(designSystem),
-                        }),
-                        contrast
+                        })
                     );
                 }
             );
         } else {
-            return accentFillAlgorithm(withDesignSystemDefaults(arg), contrast);
+            return accentFillAlgorithm(contrast)(withDesignSystemDefaults(arg));
         }
     }
 

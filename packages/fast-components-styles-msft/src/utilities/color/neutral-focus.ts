@@ -16,9 +16,6 @@ const neutralFocusAlgorithm: (designSystem: DesignSystem) => Swatch = memoize(
         return isDarkTheme(designSystem)
             ? neutralForegroundLight(designSystem)
             : neutralForegroundDark(designSystem);
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

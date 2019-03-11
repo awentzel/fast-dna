@@ -165,9 +165,6 @@ export const isDarkTheme: DesignSystemResolver<boolean> = memoize(
             ) >=
             contrast(neutralForegroundDark(designSystem), designSystem.backgroundColor)
         );
-    },
-    (designSystem: DesignSystem): string => {
-        return designSystem.backgroundColor;
     }
 );
 

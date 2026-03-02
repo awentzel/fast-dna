@@ -106,9 +106,9 @@
     "typescript": "^3.0.1",
     "utility-types": "^2.1.0",
     "webpack": "^4.1.0",
-    "webpack-bundle-analyzer": "^2.13.1",
+    "webpack-bundle-analyzer": "^5.2.0",
     "webpack-cli": "^3.1.1",
-    "webpack-dev-server": "^3.1.0",
+    "webpack-dev-server": "^5.2.3",
     "webpack-shell-plugin": "^0.5.0",
     "yargs": "^11.0.0"
   },

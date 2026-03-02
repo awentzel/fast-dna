@@ -62,9 +62,9 @@
     ]
   },
   "devDependencies": {
-    "@angular/common": "^5.2.0",
-    "@angular/compiler": "^5.2.9",
-    "@angular/core": "^5.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
     "@angular/platform-browser": "^5.2.9",
     "@angular/platform-browser-dynamic": "^5.2.9",
     "@babel/preset-env": "^7.1.0",
@@ -91,12 +91,12 @@
     "watch": "^1.0.2",
     "webpack": "^4.12.0",
     "webpack-cli": "^3.0.8",
-    "webpack-dev-server": "^3.1.4",
+    "webpack-dev-server": "^5.2.3",
     "zone.js": "^0.8.19"
   },
   "peerDependencies": {
-    "@angular/common": "^5.2.0",
-    "@angular/core": "^5.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/core": "^21.2.0",
     "core-js": "^2.4.1",
     "jss": "^9.8.0",
     "jss-preset-default": "^4.3.0",

@@ -102,7 +102,7 @@
     "typescript": "^3.0.1",
     "webpack": "^4.1.0",
     "webpack-cli": "^3.1.1",
-    "webpack-dev-server": "^3.1.0"
+    "webpack-dev-server": "^5.2.4"
   },
   "peerDependencies": {
     "@microsoft/fast-application-utilities": "^3.0.0",

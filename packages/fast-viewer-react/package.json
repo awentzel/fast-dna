@@ -116,7 +116,7 @@
     "typescript": "^3.0.1",
     "webpack": "^4.0.1",
     "webpack-cli": "^3.1.1",
-    "webpack-dev-server": "^3.1.14"
+    "webpack-dev-server": "^5.2.4"
   },
   "dependencies": {
     "@microsoft/fast-application-utilities": "^3.1.2",
